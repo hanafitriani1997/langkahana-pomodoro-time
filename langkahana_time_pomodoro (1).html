@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Langkahana Time - Aesthetic Pomodoro Timer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Line-Art Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                            950: '#09070f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #09070f;
+        }
+
+        /* SVG Circular Progress Transition */
+        .timer-ring-circle {
+            transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Screenshot 1 Modal Style Replica */
+        .modal-dark {
+            background-color: #0d0d11;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        /* Custom Switch Toggle */
+        .toggle-checkbox:checked {
+            right: 0;
+            background-color: #a78bfa;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: rgba(167, 139, 250, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Header Navigation -->
+    <header class="w-full max-w-5xl mx-auto px-6 py-6 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-2xl bg-brand-500/15 border border-brand-400/30 text-brand-300">
+                <i data-lucide="clock" class="w-6 h-6 stroke-[1.75]"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                    Langkahana <span class="text-brand-400 font-light">Time</span>
+                </h1>
+                <p class="text-xs text-slate-400 font-medium">Aesthetic & Sharp Pomodoro Workspace</p>
+            </div>
+        </div>
+
+        <!-- Right Header Actions (Line-Art Icons) -->
+        <div class="flex items-center gap-2.5">
+            <!-- Ambient Audio Modal Toggle -->
+            <button id="btn-open-audio" class="p-2.5 rounded-xl glass-card hover:bg-white/10 transition text-slate-300 hover:text-white flex items-center gap-2 text-xs font-medium" title="Suara Ambient">
+                <i data-lucide="headphones" class="w-4 h-4 stroke-[1.75] text-brand-400"></i>
+                <span class="hidden sm:inline">Suara Latar</span>
+            </button>
+
+            <!-- Settings Modal Toggle (Image 1 replica) -->
+            <button id="btn-open-settings" class="p-2.5 rounded-xl glass-card hover:bg-white/10 transition text-slate-300 hover:text-white flex items-center gap-2 text-xs font-medium" title="Pengaturan">
+                <i data-lucide="sliders" class="w-4 h-4 stroke-[1.75] text-brand-400"></i>
+                <span class="hidden sm:inline">Pengaturan</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-col items-center justify-center gap-8">
+
+        <!-- Mode Pill Switcher -->
+        <nav class="flex items-center gap-1.5 p-1.5 rounded-2xl glass-card">
+            <button data-mode="pomodoro" class="mode-tab flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 bg-brand-500/25 text-brand-200 border border-brand-400/30">
+                <i data-lucide="book-open" class="w-4 h-4 stroke-[2]"></i>
+                <span>Pomodoro</span>
+            </button>
+            <button data-mode="shortBreak" class="mode-tab flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 transition-all duration-300">
+                <i data-lucide="coffee" class="w-4 h-4 stroke-[2]"></i>
+                <span>Istirahat Pendek</span>
+            </button>
+            <button data-mode="longBreak" class="mode-tab flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 transition-all duration-300">
+                <i data-lucide="armchair" class="w-4 h-4 stroke-[2]"></i>
+                <span>Istirahat Panjang</span>
+            </button>
+        </nav>
+
+        <!-- Circular Timer Container (Exact Replica of Screenshot 2) -->
+        <div class="relative flex flex-col items-center justify-center">
+            
+            <!-- SVG Progress Circle -->
+            <div class="relative w-[300px] h-[300px] sm:w-[360px] sm:h-[360px] flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90 drop-shadow-[0_0_25px_rgba(167,139,250,0.15)]" viewBox="0 0 100 100">
+                    <!-- Background Ring -->
+                    <circle 
+                        cx="50" cy="50" r="43" 
+                        class="stroke-white/10" 
+                        stroke-width="2.5" 
+                        fill="transparent" 
+                    />
+                    <!-- Active Progress Ring (Lilac Purple Accent) -->
+                    <circle 
+                        id="timer-ring"
+                        cx="50" cy="50" r="43" 
+                        class="timer-ring-circle stroke-brand-300" 
+                        stroke-width="3" 
+                        fill="transparent" 
+                        stroke-dasharray="270.17"
+                        stroke-dashoffset="0"
+                        stroke-linecap="round"
+                    />
+                </svg>
+
+                <!-- Timer Inner Display -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                    
+                    <!-- Mode Label & Emoji (e.g. Pomodoro 📚) -->
+                    <div class="flex items-center gap-1.5 text-sm sm:text-base font-medium text-slate-200 mb-1">
+                        <span id="mode-display-name">Pomodoro</span>
+                        <span id="mode-emoji">📚</span>
+                    </div>
+
+                    <!-- Main Clock Digits (Extra Sharp, Monospace) -->
+                    <h2 id="timer-display" class="font-mono text-5xl sm:text-6xl font-extrabold tracking-tight text-white my-1 drop-shadow-lg">
+                        50:00
+                    </h2>
+
+                    <!-- Pomodoro Sequence Progress Dots (Image 1 feature) -->
+                    <div id="sequence-dots" class="flex items-center gap-1.5 my-1 text-brand-400 text-xs">
+                        <!-- Dots injected dynamically: ● ● ○ ○ -->
+                    </div>
+
+                    <!-- Estimated Finish Time (Image 2 Feature: 🔔 HH:MM) -->
+                    <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-300 font-medium tracking-wide mt-2 bg-white/5 px-3.5 py-1.5 rounded-full border border-white/10">
+                        <i data-lucide="bell" class="w-4 h-4 text-brand-300 stroke-[2]"></i>
+                        <span id="estimated-time" class="font-mono font-semibold">20:22</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Timer Action Controls -->
+            <div class="flex items-center gap-4 mt-8">
+                <!-- Reset Button -->
+                <button id="btn-reset" class="p-3.5 rounded-2xl glass-card hover:bg-white/10 transition text-slate-300 hover:text-white group" title="Reset Timer">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5 stroke-[2] group-hover:-rotate-90 transition-transform duration-300"></i>
+                </button>
+
+                <!-- Primary Play / Pause Button -->
+                <button id="btn-start" class="px-9 py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-semibold flex items-center gap-3 transition-all duration-300 shadow-lg shadow-brand-500/25 active:scale-95 text-sm sm:text-base">
+                    <i id="start-icon" data-lucide="play" class="w-5 h-5 fill-current stroke-[2]"></i>
+                    <span id="start-text">Mulai Fokus</span>
+                </button>
+
+                <!-- Skip Session Button -->
+                <button id="btn-skip" class="p-3.5 rounded-2xl glass-card hover:bg-white/10 transition text-slate-300 hover:text-white group" title="Sesi Berikutnya">
+                    <i data-lucide="skip-forward" class="w-5 h-5 stroke-[2] group-hover:translate-x-0.5 transition-transform"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Task & Langkah Kerja Planner -->
+        <section class="w-full max-w-lg glass-card rounded-3xl p-6 border border-white/10 mt-2">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-white/5">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="check-square" class="w-5 h-5 text-brand-400 stroke-[2]"></i>
+                    <h3 class="font-bold text-sm sm:text-base text-white">Target & Langkah Kerja</h3>
+                </div>
+                <span id="task-counter" class="text-xs px-2.5 py-1 rounded-full bg-brand-500/15 text-brand-300 font-mono font-medium">0/0 Selesai</span>
+            </div>
+
+            <!-- Task Input Form -->
+            <form id="task-form" class="flex gap-2 mb-4">
+                <input 
+                    type="text" 
+                    id="task-input"
+                    placeholder="Tulis target fokusmu untuk sesi ini..." 
+                    class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-400 transition"
+                    required
+                />
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-medium text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0">
+                    <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
+                    <span>Tambah</span>
+                </button>
+            </form>
+
+            <!-- Task List -->
+            <ul id="task-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <li id="task-empty" class="text-center py-5 text-slate-500 text-xs">
+                    Belum ada target. Tambahkan target fokusmu di atas!
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-4 text-xs text-slate-500 border-t border-white/5">
+        <p>© 2026 Langkahana Time — Designed for Deep Work & Clean Focus</p>
+    </footer>
+
+
+    <!-- ========================================================================= -->
+    <!-- SETTINGS MODAL (EXACT REPLICA OF SCREENSHOT 1) -->
+    <!-- ========================================================================= -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="modal-dark w-full max-w-2xl rounded-3xl p-6 md:p-8 text-slate-200 shadow-2xl relative overflow-hidden">
+            
+            <!-- Close Icon Top Right -->
+            <button class="btn-close-settings absolute top-6 right-6 text-slate-400 hover:text-white p-1 transition">
+                <i data-lucide="x" class="w-6 h-6 stroke-[2]"></i>
+            </button>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 pt-2">
+                
+                <!-- Left Sidebar Navigation Tabs -->
+                <div class="md:col-span-1 border-b md:border-b-0 md:border-r border-white/10 pb-4 md:pb-0 pr-0 md:pr-4 space-y-1">
+                    <button data-setting-tab="timers" class="setting-tab-btn w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-white bg-white/10 transition border-l-2 border-brand-400">
+                        Timers
+                    </button>
+                </div>
+
+                <!-- Right Content Area (Timers Tab - Screenshot 1 Replica) -->
+                <div class="md:col-span-3 space-y-6">
+                    
+                    <!-- Duration Inputs Grid -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-white mb-2">Pomodoro</label>
+                            <input type="number" id="input-pomodoro-min" min="1" max="180" value="50" class="w-full bg-black/60 border border-white/20 rounded-xl px-3 py-2.5 text-base font-semibold text-white focus:outline-none focus:border-brand-400 text-center">
+                            <span class="block text-xs text-slate-400 mt-1.5 font-medium">minutes</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-white mb-2">Short Break</label>
+                            <input type="number" id="input-short-min" min="1" max="60" value="10" class="w-full bg-black/60 border border-white/20 rounded-xl px-3 py-2.5 text-base font-semibold text-white focus:outline-none focus:border-brand-400 text-center">
+                            <span class="block text-xs text-slate-400 mt-1.5 font-medium">minutes</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-white mb-2">Long Break</label>
+                            <input type="number" id="input-long-min" min="1" max="90" value="30" class="w-full bg-black/60 border border-white/20 rounded-xl px-3 py-2.5 text-base font-semibold text-white focus:outline-none focus:border-brand-400 text-center">
+                            <span class="block text-xs text-slate-400 mt-1.5 font-medium">minutes</span>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Sequence Switch Options -->
+                    <div class="pt-2 border-t border-white/10 space-y-3">
+                        <div class="flex items-start gap-3">
+                            <!-- Custom Toggle Switch -->
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                                <input type="checkbox" id="toggle-sequence" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                            </label>
+                            <div class="text-xs sm:text-sm">
+                                <p class="font-bold text-slate-100 leading-snug">
+                                    Use the Pomodoro sequence: <br class="hidden sm:inline">
+                                    Pomodoro → short break, repeat 4x, then one long break
+                                </p>
+                                <p class="text-slate-400 mt-1.5 text-xs">
+                                    Number of Pomodoros complete is indicated with dots under 'Pomodoro'
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Buttons Row (Screenshot 1 replica) -->
+                    <div class="pt-6 border-t border-white/10 flex items-center justify-between gap-3">
+                        <!-- Reset All (Red Outline Pill) -->
+                        <button id="btn-settings-reset" type="button" class="px-5 py-2.5 rounded-full border border-rose-500/80 text-rose-400 hover:bg-rose-500/10 text-xs sm:text-sm font-bold transition">
+                            Reset all
+                        </button>
+
+                        <div class="flex items-center gap-3">
+                            <!-- Close Button (Dark Grey Pill) -->
+                            <button type="button" class="btn-close-settings px-6 py-2.5 rounded-full bg-slate-700/80 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-bold transition">
+                                Close
+                            </button>
+                            <!-- Save Changes (White Filled Pill) -->
+                            <button id="btn-settings-save" type="button" class="px-6 py-2.5 rounded-full bg-white text-slate-950 hover:bg-slate-200 text-xs sm:text-sm font-bold transition shadow-md">
+                                Save changes
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- AMBIENT AUDIO MODAL -->
+    <!-- ========================================================================= -->
+    <div id="audio-modal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="modal-dark w-full max-w-md rounded-3xl p-6 text-slate-200 shadow-2xl relative">
+            <div class="flex justify-between items-center mb-5">
+                <div class="flex items-center gap-2.5 font-bold text-white">
+                    <i data-lucide="headphones" class="w-5 h-5 text-brand-400 stroke-[2]"></i>
+                    <h3>Generator Suara Ambient</h3>
+                </div>
+                <button class="btn-close-audio text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5 stroke-[2]"></i>
+                </button>
+            </div>
+
+            <!-- Sound Track Controls -->
+            <div class="space-y-3.5">
+                <!-- Rain -->
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-xl bg-blue-500/15 text-blue-400">
+                            <i data-lucide="cloud-rain" class="w-5 h-5 stroke-[1.75]"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-100">Hujan Lembut</p>
+                            <p class="text-xs text-slate-400">Fokus Rileks</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="vol-rain" min="0" max="1" step="0.05" value="0.3" class="w-16 sm:w-20 accent-brand-400">
+                        <button id="toggle-rain" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 transition">
+                            <i data-lucide="play" class="w-4 h-4 stroke-[2]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- White Noise -->
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-xl bg-purple-500/15 text-purple-400">
+                            <i data-lucide="waves" class="w-5 h-5 stroke-[1.75]"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-100">White Noise</p>
+                            <p class="text-xs text-slate-400">Blokir Gangguan</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="vol-noise" min="0" max="1" step="0.05" value="0.3" class="w-16 sm:w-20 accent-brand-400">
+                        <button id="toggle-noise" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 transition">
+                            <i data-lucide="play" class="w-4 h-4 stroke-[2]"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-white/10 text-right">
+                <button class="btn-close-audio px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JavaScript Engine -->
+    <script>
+        // --- Application State ---
+        const config = {
+            pomodoro: 50 * 60,   // Default 50 mins (Matching Screenshot 1)
+            shortBreak: 10 * 60, // Default 10 mins (Matching Screenshot 1)
+            longBreak: 30 * 60,  // Default 30 mins (Matching Screenshot 1)
+            useSequence: true,
+            completedSessions: 0
+        };
+
+        const MODE_INFO = {
+            pomodoro: { name: 'Pomodoro', emoji: '📚', color: 'stroke-brand-300' },
+            shortBreak: { name: 'Istirahat Pendek', emoji: '☕', color: 'stroke-emerald-400' },
+            longBreak: { name: 'Istirahat Panjang', emoji: '🌿', color: 'stroke-sky-400' }
+        };
+
+        let currentMode = 'pomodoro';
+        let timeLeft = config[currentMode];
+        let totalDuration = config[currentMode];
+        let isRunning = false;
+        let timerInterval = null;
+        let tasks = [];
+
+        // DOM Element Cache
+        const timerDisplay = document.getElementById('timer-display');
+        const timerRing = document.getElementById('timer-ring');
+        const estimatedTimeDisplay = document.getElementById('estimated-time');
+        const modeDisplayName = document.getElementById('mode-display-name');
+        const modeEmoji = document.getElementById('mode-emoji');
+        const sequenceDots = document.getElementById('sequence-dots');
+
+        const btnStart = document.getElementById('btn-start');
+        const startText = document.getElementById('start-text');
+        const startIcon = document.getElementById('start-icon');
+        const btnReset = document.getElementById('btn-reset');
+        const btnSkip = document.getElementById('btn-skip');
+        const modeTabs = document.querySelectorAll('.mode-tab');
+
+        // Task Elements
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+        const taskEmpty = document.getElementById('task-empty');
+        const taskCounter = document.getElementById('task-counter');
+
+        // --- Web Audio Synth for Alarm Chimes ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function triggerAlarmSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const now = audioCtx.currentTime;
+            // Play a pleasant double chime
+            [523.25, 659.25, 783.99].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                gain.gain.setValueAtTime(0.3, now + i * 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 1.2);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.15);
+                osc.stop(now + i * 0.15 + 1.2);
+            });
+        }
+
+        // --- Core Timer Logic ---
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            // Crisp 2-digit format e.g., 49:55
+            const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            timerDisplay.textContent = formatted;
+            document.title = `${formatted} - ${MODE_INFO[currentMode].name} | Langkahana Time`;
+
+            // Circle Offset Calculation (r=43 => Circumference ~270.17)
+            const circumference = 2 * Math.PI * 43;
+            const progress = timeLeft / totalDuration;
+            const dashoffset = circumference * (1 - progress);
+            timerRing.style.strokeDashoffset = dashoffset;
+
+            // Recalculate Estimated End Time (Screenshot 2: 🔔 HH:MM)
+            updateEstimatedFinishTime();
+
+            // Render Sequence Dots
+            renderDots();
+        }
+
+        function updateEstimatedFinishTime() {
+            const now = new Date();
+            const finishDate = new Date(now.getTime() + timeLeft * 1000);
+            const hours = String(finishDate.getHours()).padStart(2, '0');
+            const minutes = String(finishDate.getMinutes()).padStart(2, '0');
+            estimatedTimeDisplay.textContent = `${hours}:${minutes}`;
+        }
+
+        function renderDots() {
+            if (!config.useSequence) {
+                sequenceDots.innerHTML = '';
+                return;
+            }
+            let html = '';
+            const totalDots = 4;
+            const filledDots = config.completedSessions % totalDots;
+
+            for (let i = 0; i < totalDots; i++) {
+                if (i < filledDots) {
+                    html += `<i data-lucide="circle-dot" class="w-3.5 h-3.5 fill-brand-400 text-brand-300"></i>`;
+                } else {
+                    html += `<i data-lucide="circle" class="w-3.5 h-3.5 text-slate-600"></i>`;
+                }
+            }
+            sequenceDots.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isRunning = true;
+            startText.textContent = 'Jeda';
+            startIcon.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateDisplay();
+                } else {
+                    handleSessionComplete();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            startText.textContent = 'Lanjutkan';
+            startIcon.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            totalDuration = config[currentMode];
+            timeLeft = totalDuration;
+            startText.textContent = 'Mulai Fokus';
+            updateDisplay();
+        }
+
+        function setMode(modeKey) {
+            currentMode = modeKey;
+            modeDisplayName.textContent = MODE_INFO[currentMode].name;
+            modeEmoji.textContent = MODE_INFO[currentMode].emoji;
+
+            // Update Tab active UI
+            modeTabs.forEach(tab => {
+                if (tab.dataset.mode === modeKey) {
+                    tab.className = 'mode-tab flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 bg-brand-500/25 text-brand-200 border border-brand-400/30';
+                } else {
+                    tab.className = 'mode-tab flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 transition-all duration-300';
+                }
+            });
+
+            resetTimer();
+        }
+
+        function handleSessionComplete() {
+            pauseTimer();
+            triggerAlarmSound();
+
+            if (currentMode === 'pomodoro') {
+                config.completedSessions++;
+                if (config.useSequence && config.completedSessions % 4 === 0) {
+                    alert('Luar biasa! 4 sesi Pomodoro selesai. Waktunya Istirahat Panjang!');
+                    setMode('longBreak');
+                } else {
+                    alert('Sesi Pomodoro selesai! Silakan ambil istirahat pendek.');
+                    setMode('shortBreak');
+                }
+            } else {
+                alert('Istirahat selesai! Siap kembali fokus?');
+                setMode('pomodoro');
+            }
+        }
+
+        // --- Task List Management ---
+
+        function renderTasks() {
+            if (tasks.length === 0) {
+                taskEmpty.style.display = 'block';
+                taskList.querySelectorAll('li:not(#task-empty)').forEach(el => el.remove());
+                taskCounter.textContent = '0/0 Selesai';
+                return;
+            }
+
+            taskEmpty.style.display = 'none';
+            taskList.querySelectorAll('li:not(#task-empty)').forEach(el => el.remove());
+
+            let completed = 0;
+            tasks.forEach((task, index) => {
+                if (task.completed) completed++;
+                const li = document.createElement('li');
+                li.className = `flex items-center justify-between p-3 rounded-2xl border transition ${task.completed ? 'bg-white/2 border-white/5 opacity-50' : 'bg-white/5 border-white/10'}`;
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <button onclick="toggleTask(${index})" class="p-0.5 text-slate-400 hover:text-brand-300">
+                            <i data-lucide="${task.completed ? 'check-circle-2' : 'circle'}" class="w-5 h-5 ${task.completed ? 'text-brand-400' : ''} stroke-[1.75]"></i>
+                        </button>
+                        <span class="text-xs sm:text-sm text-slate-200 ${task.completed ? 'line-through text-slate-500' : ''} truncate">${task.text}</span>
+                    </div>
+                    <button onclick="deleteTask(${index})" class="text-slate-500 hover:text-rose-400 p-1 transition">
+                        <i data-lucide="trash-2" class="w-4 h-4 stroke-[1.75]"></i>
+                    </button>
+                `;
+                taskList.appendChild(li);
+            });
+
+            taskCounter.textContent = `${completed}/${tasks.length} Selesai`;
+            lucide.createIcons();
+        }
+
+        window.toggleTask = function(idx) {
+            tasks[idx].completed = !tasks[idx].completed;
+            renderTasks();
+        };
+
+        window.deleteTask = function(idx) {
+            tasks.splice(idx, 1);
+            renderTasks();
+        };
+
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = taskInput.value.trim();
+            if (text) {
+                tasks.push({ text: text, completed: false });
+                taskInput.value = '';
+                renderTasks();
+            }
+        });
+
+        // --- Modals Logic & Event Handlers ---
+
+        const settingsModal = document.getElementById('settings-modal');
+        const audioModal = document.getElementById('audio-modal');
+
+        function openModal(el) {
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.remove('opacity-0'), 10);
+        }
+
+        function closeModal(el) {
+            el.classList.add('opacity-0');
+            setTimeout(() => el.classList.add('hidden'), 300);
+        }
+
+        document.getElementById('btn-open-settings').addEventListener('click', () => openModal(settingsModal));
+        document.getElementById('btn-open-audio').addEventListener('click', () => openModal(audioModal));
+
+        document.querySelectorAll('.btn-close-settings').forEach(btn => {
+            btn.addEventListener('click', () => closeModal(settingsModal));
+        });
+        document.querySelectorAll('.btn-close-audio').forEach(btn => {
+            btn.addEventListener('click', () => closeModal(audioModal));
+        });
+
+        // Settings Save Action
+        document.getElementById('btn-settings-save').addEventListener('click', () => {
+            const pVal = parseInt(document.getElementById('input-pomodoro-min').value) || 50;
+            const sVal = parseInt(document.getElementById('input-short-min').value) || 10;
+            const lVal = parseInt(document.getElementById('input-long-min').value) || 30;
+
+            config.pomodoro = pVal * 60;
+            config.shortBreak = sVal * 60;
+            config.longBreak = lVal * 60;
+            config.useSequence = document.getElementById('toggle-sequence').checked;
+
+            closeModal(settingsModal);
+            resetTimer();
+        });
+
+        // Settings Reset All
+        document.getElementById('btn-settings-reset').addEventListener('click', () => {
+            document.getElementById('input-pomodoro-min').value = 50;
+            document.getElementById('input-short-min').value = 10;
+            document.getElementById('input-long-min').value = 30;
+            document.getElementById('toggle-sequence').checked = true;
+            config.completedSessions = 0;
+        });
+
+        // Ambient Sound Controls
+        let rainSource = null, rainGain = null, isRainOn = false;
+        let noiseSource = null, noiseGain = null, isNoiseOn = false;
+
+        document.getElementById('toggle-rain').addEventListener('click', function() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!isRainOn) {
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+
+                rainSource = audioCtx.createBufferSource();
+                rainSource.buffer = buffer;
+                rainSource.loop = true;
+                rainGain = audioCtx.createGain();
+                rainGain.gain.setValueAtTime(parseFloat(document.getElementById('vol-rain').value), audioCtx.currentTime);
+
+                rainSource.connect(rainGain);
+                rainGain.connect(audioCtx.destination);
+                rainSource.start();
+                isRainOn = true;
+                this.innerHTML = '<i data-lucide="pause" class="w-4 h-4 stroke-[2]"></i>';
+            } else {
+                if (rainSource) rainSource.stop();
+                isRainOn = false;
+                this.innerHTML = '<i data-lucide="play" class="w-4 h-4 stroke-[2]"></i>';
+            }
+            lucide.createIcons();
+        });
+
+        document.getElementById('vol-rain').addEventListener('input', (e) => {
+            if (rainGain) rainGain.gain.setValueAtTime(parseFloat(e.target.value), audioCtx.currentTime);
+        });
+
+        document.getElementById('toggle-noise').addEventListener('click', function() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!isNoiseOn) {
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    data[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = data[i];
+                    data[i] *= 0.1;
+                }
+
+                noiseSource = audioCtx.createBufferSource();
+                noiseSource.buffer = buffer;
+                noiseSource.loop = true;
+                noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(parseFloat(document.getElementById('vol-noise').value), audioCtx.currentTime);
+
+                noiseSource.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noiseSource.start();
+                isNoiseOn = true;
+                this.innerHTML = '<i data-lucide="pause" class="w-4 h-4 stroke-[2]"></i>';
+            } else {
+                if (noiseSource) noiseSource.stop();
+                isNoiseOn = false;
+                this.innerHTML = '<i data-lucide="play" class="w-4 h-4 stroke-[2]"></i>';
+            }
+            lucide.createIcons();
+        });
+
+        document.getElementById('vol-noise').addEventListener('input', (e) => {
+            if (noiseGain) noiseGain.gain.setValueAtTime(parseFloat(e.target.value), audioCtx.currentTime);
+        });
+
+        // Event Listeners for Timer Controls
+        btnStart.addEventListener('click', toggleTimer);
+        btnReset.addEventListener('click', resetTimer);
+        btnSkip.addEventListener('click', () => {
+            if (currentMode === 'pomodoro') setMode('shortBreak');
+            else setMode('pomodoro');
+        });
+
+        modeTabs.forEach(tab => {
+            tab.addEventListener('click', () => setMode(tab.dataset.mode));
+        });
+
+        // Init App
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            updateDisplay();
+            // Continuously sync real-time completion estimate
+            setInterval(updateEstimatedFinishTime, 5000);
+        });
+    </script>
+</body>
+</html>
